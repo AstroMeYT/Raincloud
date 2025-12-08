@@ -127,6 +127,11 @@
 
     <!-- 2. MAIN CONTENT AREA -->
     <div class="flex-grow p-8 overflow-y-auto main-content">
+        
+        <!-- Mobile Menu Button (Toggle Sidebar) -->
+        <button id="menuButton" class="lg:hidden text-gray-400 hover:text-white mb-4 p-2 rounded-lg card-bg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
 
         <!-- 2a. FILES View -->
         <div id="filesView" class="view-panel block">
@@ -284,6 +289,7 @@
         let currentView = 'files'; 
         
         // --- DOM Element References ---
+        const sidebar = document.getElementById('sidebar'); // Added for touch logic
         const connectBtn = document.getElementById('connectBtn');
         const serverIpEl = document.getElementById('serverIp');
         const refreshBtn = document.getElementById('refreshBtn');
@@ -296,13 +302,14 @@
         const indicatorEl = document.getElementById('connectionIndicator');
         const currentStatusSettingEl = document.getElementById('currentStatusSetting');
         const userIdDisplay = document.getElementById('userIdDisplay');
-        
+        const menuButton = document.getElementById('menuButton'); // New menu button
+
         // Protocol elements
         const protocolWs = document.getElementById('protocolWs');
         const protocolWss = document.getElementById('protocolWss');
         const protocolWarning = document.getElementById('protocolWarning');
         
-        // New Persistence Element
+        // Persistence Element
         const saveConfigBtn = document.getElementById('saveConfigBtn');
 
         // Modal elements
@@ -488,7 +495,87 @@
                 this.classList.remove('hover:bg-gray-700', 'text-gray-300');
                 
                 currentView = targetView;
+                
+                // NEW: Close sidebar after navigation on small screens
+                if (window.innerWidth < 1024) {
+                    toggleSidebar(false);
+                }
             });
+        });
+
+        // --- Sidebar Visibility and Mobile Touch Control ---
+        const SIDEBAR_THRESHOLD = 50; 
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isSwipeDetected = false;
+        let sidebarOpen = false; 
+
+        function updateSidebarState() {
+            // Check if the sidebar is currently visible (not translated out)
+            sidebarOpen = !sidebar.classList.contains('-translate-x-full');
+        }
+
+        function toggleSidebar(open) {
+            if (open) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+            updateSidebarState();
+        }
+
+        // 1. Menu button click handler
+        menuButton.addEventListener('click', () => toggleSidebar(true));
+
+        // 2. TOUCH START: Record initial position
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwipeDetected = false;
+            updateSidebarState(); 
+        }, { passive: false }); // CRITICAL: passive: false allows preventDefault
+
+        // 3. TOUCH MOVE: Determine swipe direction and execute action
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length !== 1) return;
+
+            const deltaX = e.touches[0].clientX - touchStartX;
+            const deltaY = e.touches[0].clientY - touchStartY;
+            
+            const distanceX = Math.abs(deltaX);
+            const distanceY = Math.abs(deltaY);
+
+            // Check if movement is predominantly horizontal
+            const isHorizontal = distanceX > distanceY + 10; 
+
+            if (isHorizontal && distanceX > 20) { // Require a minimum drag distance
+                isSwipeDetected = true;
+                
+                // Swipe Left (Closing): Sidebar is open AND deltaX is negative
+                if (sidebarOpen && deltaX < -SIDEBAR_THRESHOLD) {
+                    e.preventDefault();
+                    toggleSidebar(false);
+                    return;
+                } 
+                
+                // Swipe Right (Opening): Sidebar is closed AND touch started near the edge (0-20px) AND deltaX is positive
+                if (!sidebarOpen && touchStartX < 20 && deltaX > SIDEBAR_THRESHOLD) {
+                     e.preventDefault();
+                     toggleSidebar(true);
+                     return;
+                }
+            }
+            
+            // Prevent default vertical scrolling if we are in a confirmed horizontal swipe zone
+            if (isSwipeDetected && isHorizontal) {
+                 e.preventDefault();
+            }
+        }, { passive: false }); // CRITICAL: passive: false allows preventDefault
+
+        document.addEventListener('touchend', () => {
+            isSwipeDetected = false;
         });
 
         // --- Theme Controls ---
