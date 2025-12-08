@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raincloud Client</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* BASE THEME (DARK) STYLES */
+        :root {
+            /* General */
+            --bg-body: #1f2937;
+            --bg-sidebar: #111827;
+            --bg-main: #1f2937;
+            --text-primary: #d1d5db;
+            --text-secondary: #6b7280;
+            --border-color: #374151;
+            --card-bg: #1f2937; 
+            --log-bg: #030712;
+            --log-color: #10b981; /* Emerald for dark mode log */
+        }
+
+        /* LIGHT MODE OVERRIDES */
+        .light-mode {
+            --bg-body: #f3f4f6;
+            --bg-sidebar: #ffffff;
+            --bg-main: #f3f4f6;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #d1d5db;
+            --card-bg: #ffffff; 
+            --log-bg: #f9fafb;
+            --log-color: #10b981; /* Keep emerald for log */
+        }
+
+        /* Apply Theme Variables */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-primary); 
+            transition: background-color 0.3s, color 0.3s; 
+        }
+        .sidebar { 
+            background-color: var(--bg-sidebar);
+            border-right-color: var(--border-color); 
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .main-content { 
+            background-color: var(--bg-main);
+        }
+
+        /* Adjusting specific Tailwind utility classes using variables */
+        .card-bg { background-color: var(--card-bg); border-color: var(--border-color); }
+        .log-bg { background-color: var(--log-bg); color: var(--log-color); border-color: var(--border-color); }
+        .border-gray-700 { border-color: var(--border-color); }
+        .text-gray-200 { color: var(--text-primary); } /* Headings */
+        .text-gray-300 { color: var(--text-primary); } 
+        .text-gray-400 { color: var(--text-secondary); }
+        .text-gray-500 { color: var(--text-secondary); } 
+        .bg-gray-700 { background-color: var(--border-color); } /* Table header */
+        
+        /* List Item Hover */
+        .file-item:hover { background-color: rgba(0, 0, 0, 0.05); }
+        .light-mode .file-item:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+
+        /* Custom scrollbar for log */
+        #log::-webkit-scrollbar { width: 4px; }
+        #log::-webkit-scrollbar-thumb { background: #6b7280; border-radius: 2px; }
+        #log::-webkit-scrollbar-track { background: var(--log-bg); }
+        /* File Icon Styling */
+        .file-icon { width: 20px; height: 20px; fill: currentColor; margin-right: 8px; }
+        
+        /* The previous swipe-area is now removed as swipe works everywhere */
+    </style>
+</head>
+<body class="min-h-screen flex">
+    
+    <!-- Toast Notification Container (Bottom Right) -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2 z-50">
+        <!-- Toasts will be injected here -->
+    </div>
+
+    <!-- 1. SIDEBAR (Navigation) -->
+    <!-- On mobile (default), it's fixed and hidden (-translate-x-full). On lg screens, it's static and visible (translate-x-0). -->
+    <div id="sidebar" class="sidebar w-64 flex-shrink-0 p-4 border-r shadow-xl flex flex-col 
+                fixed h-full -translate-x-full lg:static lg:translate-x-0 z-40 transition-transform duration-300">
+        
+        <!-- Sidebar Title (Hidden on mobile when condensed) -->
+        <h1 class="text-2xl font-extrabold text-indigo-400 mb-8 mt-2">Raincloud Client</h1>
+
+        <nav class="space-y-2 flex-grow">
+            <button id="navFiles" data-view="files" class="nav-btn w-full flex items-center p-3 rounded-xl transition duration-150 bg-indigo-600 text-white font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /><path d="M6 15a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2z" /></svg>
+                My Files
+            </button>
+            <button id="navSettings" data-view="settings" class="nav-btn w-full flex items-center p-3 rounded-xl transition duration-150 hover:bg-gray-700 text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-.214-.78-.377-1.2-.477-.327-.085-.68-.112-1.012-.08C7.5 2.5 5 4.043 5 7.5c0 1.25.32 2.37.902 3.324l-.193.13C4.544 12.01 4 13.593 4 15.25c0 .324.032.645.097.962.067.33-.005.67-.189.982l-.089.155A2.25 2.25 0 005.15 19.5h9.7A2.25 2.25 0 0015.992 18l-.09-.155a1.597 1.597 0 01-.188-.982 4.47 4.47 0 01.096-.962c0-1.657-.544-3.24-1.709-4.524l-.193-.13a4.72 4.72 0 01.902-3.324c0-3.457-2.5-5-4.25-5.327z" clip-rule="evenodd" /></svg>
+                Settings
+            </button>
+        </nav>
+
+        <!-- Debug and Status at the bottom -->
+        <div class="mt-auto pt-4 border-t border-gray-700">
+            <button id="navDebug" data-view="debug" class="nav-btn w-full flex items-center p-3 rounded-xl transition duration-150 hover:bg-gray-700 text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.828 7.332A1.474 1.474 0 018.57 6.34H11.43a1.474 1.474 0 011.742.992l1.624 4.54a1.474 1.474 0 01-1.397 2.01H6.593a1.474 1.474 0 01-1.397-2.01l1.624-4.54z" clip-rule="evenodd" /></svg>
+                Debug Log
+            </button>
+            <div id="connectionIndicator" class="mt-3 text-xs text-center p-2 rounded-lg bg-gray-700 text-yellow-400">
+                Status: Disconnected
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN CONTENT AREA -->
+    <div class="flex-grow p-8 overflow-y-auto main-content">
+
+        <!-- 2a. FILES View -->
+        <div id="filesView" class="view-panel block">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-200">Server Directory</h2>
+                <div class="flex space-x-3">
+                    <!-- Upload Button that opens the modal -->
+                    <button id="showUploadModalBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out text-sm disabled:opacity-50" disabled>
+                        + New Upload
+                    </button>
+                    <!-- Refresh Button (simplified) -->
+                    <button id="refreshBtn" disabled class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md disabled:opacity-50 transition duration-150 ease-in-out text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0115 4.873A6.002 6.002 0 0010.101 4h-2.1l-.7.712A1 1 0 016.5 5h-2a1 1 0 01-1-1v-1zM16 18a1 1 0 01-1-1v-2.101a7.002 7.002 0 01-15-4.873A6.002 6.002 0 009.899 16h2.1l.7-.712A1 1 0 0113.5 15h2a1 1 0 011 1v1z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- File List Table -->
+            <div class="rounded-xl overflow-hidden shadow-2xl border border-gray-700">
+                <div class="grid grid-cols-12 text-sm font-bold text-gray-400 bg-gray-700 p-3 border-b border-gray-600">
+                    <div class="col-span-6">File Name</div>
+                    <div class="col-span-6 text-right">Actions</div>
+                </div>
+
+                <div id="fileListContainer" class="max-h-[60vh] overflow-y-auto card-bg divide-y divide-gray-700">
+                    <p class="text-gray-500 text-center p-6">Connect to the server to list files.</p>
+                </div>
+            </div>
+
+             <!-- Download Link -->
+            <div id="downloadLink" class="mt-4 p-3 rounded-lg text-sm bg-blue-900 text-blue-300 hidden shadow-inner">
+                <!-- Download link will appear here -->
+            </div>
+        </div>
+
+        <!-- 2b. SETTINGS View -->
+        <div id="settingsView" class="view-panel hidden">
+            <h2 class="text-3xl font-bold text-gray-200 mb-6">Settings</h2>
+            
+            <div class="space-y-6">
+
+                <!-- Connection Panel (Moved Here) -->
+                <div id="connectionPanel" class="p-4 rounded-xl card-bg shadow-lg border border-indigo-700">
+                    <h3 class="text-xl font-bold text-gray-200 mb-3">Server Connection</h3>
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <label for="serverIp" class="text-gray-400 font-semibold mr-4 mb-2 md:mb-0 text-sm flex-shrink-0">Server Address:</label>
+                        <!-- Updated Placeholder for clarity on Local vs Public connection -->
+                        <input type="text" id="serverIp" placeholder="e.g., 192.168.1.10:8765 (Local) or example.com:8765 (Public)"
+                            class="flex-grow p-2 border border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out w-full md:w-auto mr-4 bg-gray-700 text-white">
+                        <button id="connectBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out mt-2 md:mt-0 flex-shrink-0">
+                            Connect
+                        </button>
+                    </div>
+                    <p class="text-gray-400 mt-3 text-sm">Current Status: <span id="currentStatusSetting">Disconnected</span></p>
+                </div>
+
+                <!-- Theme Settings -->
+                <div class="p-4 rounded-xl card-bg shadow-lg border border-gray-700">
+                    <h3 class="text-xl font-bold text-gray-200 mb-3">Application Theme</h3>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Appearance Mode:</span>
+                        <div class="inline-flex rounded-md shadow-sm" role="group">
+                            <button id="themeDarkBtn" type="button" class="px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-700 rounded-l-lg hover:bg-gray-600 focus:z-10 focus:ring-2 focus:ring-indigo-500 focus:text-white">
+                                Dark
+                            </button>
+                            <button id="themeLightBtn" type="button" class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-indigo-500 focus:text-indigo-700">
+                                Light
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 2c. DEBUG View -->
+        <div id="debugView" class="view-panel hidden">
+            <h2 class="text-3xl font-bold text-gray-200 mb-6">System Debug Log</h2>
+            <div id="log" class="log-bg p-4 rounded-xl text-xs font-mono overflow-auto h-96 shadow-inner border">
+                Server messages will appear here...
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full transform transition-transform duration-300 scale-100 border border-indigo-500">
+            <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-3">
+                <h3 class="text-2xl font-bold text-indigo-400">File Upload</h3>
+                <button id="closeUploadModalBtn" class="text-gray-400 hover:text-white transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <!-- File Input -->
+            <input type="file" id="fileInput" disabled class="w-full p-3 text-sm border border-gray-600 rounded-lg mb-6 bg-gray-700 text-white file:bg-indigo-600 file:text-white file:border-none file:rounded-md file:py-2 file:px-4 file:mr-4 file:cursor-pointer disabled:opacity-50">
+            
+            <!-- Upload Button -->
+            <button id="uploadBtn" disabled class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg disabled:opacity-50 transition duration-150 ease-in-out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                Start Upload
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const serverIpEl = document.getElementById('serverIp');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const fileInput = document.getElementById('fileInput'); 
+        const uploadBtn = document.getElementById('uploadBtn'); 
+        const logEl = document.getElementById('log');
+        const downloadLinkEl = document.getElementById('downloadLink');
+        const toastContainer = document.getElementById('toastContainer');
+        const indicatorEl = document.getElementById('connectionIndicator');
+        const currentStatusSettingEl = document.getElementById('currentStatusSetting');
+        const sidebar = document.getElementById('sidebar'); 
+        
+        // Modal elements
+        const uploadModal = document.getElementById('uploadModal');
+        const showUploadModalBtn = document.getElementById('showUploadModalBtn');
+        const closeUploadModalBtn = document.getElementById('closeUploadModalBtn');
+
+        // Theme elements
+        const themeDarkBtn = document.getElementById('themeDarkBtn');
+        const themeLightBtn = document.getElementById('themeLightBtn');
+
+        let ws = null;
+        let currentView = 'files'; 
+        let pendingConnectionToast = null; 
+        
+        // --- Global Swipe Variables ---
+        let touchstartX = 0;
+        let touchstartY = 0; // New: Track Y position
+        let touchendX = 0;
+        const swipeThreshold = 50; // Minimum distance for a recognized gesture
+        const horizontalTolerance = 10; // New: Distance check to confirm horizontal swipe
+        const mobileBreakpoint = 1024; // Tailwind's 'lg' breakpoint
+
+        // --- Mobile Sidebar Toggle and Swipe Logic ---
+        function isMobile() {
+            return window.innerWidth < mobileBreakpoint;
+        }
+
+        function toggleSidebar() {
+            // Toggles the translate class to slide the sidebar in/out
+            const isSidebarHidden = sidebar.classList.contains('-translate-x-full');
+            
+            sidebar.classList.toggle('-translate-x-full', !isSidebarHidden); 
+
+            // Handle the backdrop overlay
+            let backdrop = document.getElementById('sidebarBackdrop');
+            if (!backdrop && isMobile()) { // Only create backdrop on mobile
+                backdrop = document.createElement('div');
+                backdrop.id = 'sidebarBackdrop';
+                // Initially hidden (opacity-0 and pointer-events-none)
+                backdrop.className = 'fixed inset-0 bg-black opacity-0 transition-opacity duration-300 z-30 lg:hidden pointer-events-none';
+                backdrop.addEventListener('click', toggleSidebar); // Close on click
+                document.body.appendChild(backdrop);
+            }
+            
+            if (backdrop) {
+                // Toggle backdrop visibility/opacity based on sidebar state
+                if (isSidebarHidden) { // Sidebar is about to open
+                    backdrop.classList.add('opacity-50', 'pointer-events-auto');
+                    backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                } else { // Sidebar is about to close
+                    backdrop.classList.add('opacity-0', 'pointer-events-none');
+                    backdrop.classList.remove('opacity-50', 'pointer-events-auto');
+                }
+            }
+        }
+        
+        // --- Swipe Detection (Updated to prevent native back/forward navigation) ---
+        
+        document.addEventListener('touchstart', e => {
+            if (!isMobile() || e.touches.length !== 1) return;
+            touchstartX = e.touches[0].clientX;
+            touchstartY = e.touches[0].clientY; 
+            touchendX = 0;
+        }, { passive: true }); // Use passive: true by default to avoid blocking scroll initially
+
+        document.addEventListener('touchmove', e => {
+            if (!isMobile() || touchstartX === 0) return;
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const deltaX = currentX - touchstartX;
+            const deltaY = currentY - touchstartY;
+            
+            // Check if movement is primarily horizontal and exceeds tolerance
+            if (Math.abs(deltaX) > horizontalTolerance && Math.abs(deltaX) > Math.abs(deltaY)) {
+                // This is a horizontal swipe we want to handle. Prevent browser's default behavior (go back/forward).
+                // NOTE: Using preventDefault() here is key to fixing the browser back button issue.
+                e.preventDefault(); 
+            } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                // Primarily vertical scroll, cancel horizontal gesture recognition
+                touchstartX = 0; 
+            }
+        }, { passive: false }); // Needs passive: false to allow preventDefault for touchmove
+
+        document.addEventListener('touchend', e => {
+            if (!isMobile() || touchstartX === 0) return;
+            
+            // If the gesture was cancelled by vertical scrolling, just return.
+            if (touchstartX === 0) return;
+
+            // Calculate touchendX from the last changed touch point
+            if (e.changedTouches.length > 0) {
+                touchendX = e.changedTouches[0].clientX;
+                handleGesture();
+            }
+
+            // Reset state
+            touchstartX = 0;
+            touchendX = 0;
+        }, { passive: true });
+
+
+        function handleGesture() {
+            const isSidebarOpen = !sidebar.classList.contains('-translate-x-full');
+            const swipeDistance = touchendX - touchstartX;
+
+            if (swipeDistance > swipeThreshold && !isSidebarOpen) {
+                // Swipe Right (Open) - Works anywhere on the screen
+                toggleSidebar();
+            } else if (swipeDistance < -swipeThreshold && isSidebarOpen) {
+                // Swipe Left (Close)
+                toggleSidebar();
+            }
+        }
+
+
+        // --- Theme Management ---
+        function applyTheme(theme) {
+            // ... (Theme logic remains the same) ...
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                themeLightBtn.classList.add('bg-indigo-500', 'text-white', 'hover:bg-indigo-500');
+                themeDarkBtn.classList.remove('bg-gray-700', 'text-white', 'hover:bg-gray-600');
+                themeDarkBtn.classList.add('bg-white', 'text-gray-900', 'hover:bg-gray-100');
+            } else {
+                document.body.classList.remove('light-mode');
+                themeDarkBtn.classList.add('bg-gray-700', 'text-white', 'hover:bg-gray-600');
+                themeLightBtn.classList.remove('bg-indigo-500', 'text-white', 'hover:bg-indigo-500');
+                themeLightBtn.classList.add('bg-white', 'text-gray-900', 'hover:bg-gray-100');
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // Initialize theme from storage (defaults to dark)
+        const storedTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(storedTheme); 
+
+        themeDarkBtn.addEventListener('click', () => applyTheme('dark'));
+        themeLightBtn.addEventListener('click', () => applyTheme('light'));
+
+
+        // --- Navigation ---
+
+        // Function to update the view state and UI
+        function setView(viewName) {
+            currentView = viewName;
+            
+            document.querySelectorAll('.view-panel').forEach(panel => {
+                panel.classList.toggle('hidden', panel.id !== `${viewName}View`);
+            });
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isSelected = btn.dataset.view === viewName;
+                btn.classList.toggle('bg-indigo-600', isSelected);
+                btn.classList.toggle('text-white', isSelected);
+                
+                // Adjust non-selected buttons based on theme
+                const theme = localStorage.getItem('theme') || 'dark';
+                if (!isSelected) {
+                    btn.classList.toggle('hover:bg-gray-700', theme === 'dark');
+                    btn.classList.toggle('hover:bg-gray-100', theme === 'light');
+                    btn.classList.toggle('text-gray-300', theme === 'dark');
+                    btn.classList.toggle('text-gray-700', theme === 'light');
+                }
+            });
+            
+            // Close sidebar on view change if on mobile (User requirement)
+            if (isMobile()) { 
+                toggleSidebar();
+            }
+        }
+
+        // Attach event listeners for navigation buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => setView(btn.dataset.view));
+        });
+
+        // Initialize view
+        setView('files');
+
+
+        // --- Utility Functions ---
+
+        // Detailed logging (for debugging log window)
+        function logMessage(message, level = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.textContent = `[${time}] [${level.toUpperCase()}] ${message}`;
+            logEl.prepend(logItem); 
+            if (logEl.children.length > 50) {
+                logEl.removeChild(logEl.lastChild);
+            }
+        }
+
+        // User-facing connection indicator and status update
+        function updateStatus(message, colorClass = 'text-yellow-400') {
+            indicatorEl.textContent = `Status: ${message}`;
+            indicatorEl.className = `mt-3 text-xs text-center p-2 rounded-lg bg-gray-700 ${colorClass}`;
+            currentStatusSettingEl.textContent = message;
+        }
+
+        /**
+         * Clears the specific pending connection toast if it exists.
+         */
+        function dismissPendingToast() {
+            if (pendingConnectionToast && pendingConnectionToast.parentElement === toastContainer) {
+                // Increased translation to ensure it's completely off screen
+                pendingConnectionToast.classList.add('opacity-0', 'translate-x-[300%]');
+                
+                setTimeout(() => {
+                    if (pendingConnectionToast && pendingConnectionToast.parentElement) {
+                        pendingConnectionToast.remove();
+                    }
+                }, 300); 
+            }
+            pendingConnectionToast = null;
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info', duration = 4000) {
+            const colors = {
+                'success': 'bg-green-600',
+                'error': 'bg-red-700',
+                'warning': 'bg-yellow-600',
+                'info': 'bg-indigo-600',
+                'pending': 'bg-blue-600 animate-pulse'
+            };
+
+            const toast = document.createElement('div');
+            // Removed icon elements for text-only toasts
+            toast.className = `flex items-center p-4 rounded-xl shadow-xl text-white font-semibold ${colors[type]} transition-all duration-300 transform translate-x-0 opacity-100`;
+            
+            // Text message only
+            toast.innerHTML = `<div>${message}</div>`;
+            
+            toastContainer.appendChild(toast);
+
+            if (type === 'pending' && message.includes('Connecting')) {
+                dismissPendingToast(); 
+                pendingConnectionToast = toast;
+            }
+
+            setTimeout(() => {
+                // Increased translation to ensure it's completely off screen
+                toast.classList.add('opacity-0', 'translate-x-[300%]');
+                toast.addEventListener('transitionend', () => toast.remove());
+                
+                if (toast === pendingConnectionToast) {
+                    pendingConnectionToast = null;
+                }
+            }, duration);
+        }
+
+        function setControlsEnabled(enabled) {
+            refreshBtn.disabled = !enabled;
+            showUploadModalBtn.disabled = !enabled; 
+            fileInput.disabled = !enabled;
+            uploadBtn.disabled = !enabled;
+            serverIpEl.disabled = enabled;
+            connectBtn.textContent = enabled ? 'Disconnect' : 'Connect';
+            connectBtn.classList.toggle('bg-red-600', enabled);
+            connectBtn.classList.toggle('hover:bg-red-700', enabled);
+            connectBtn.classList.toggle('bg-indigo-600', !enabled);
+            connectBtn.classList.toggle('hover:bg-indigo-700', !enabled);
+        }
+        
+        // --- Modal Control ---
+        showUploadModalBtn.addEventListener('click', () => {
+            uploadModal.classList.remove('hidden');
+        });
+
+        closeUploadModalBtn.addEventListener('click', () => {
+            uploadModal.classList.add('hidden');
+        });
+
+        // Close modal when clicking outside
+        uploadModal.addEventListener('click', (e) => {
+            if (e.target === uploadModal) {
+                uploadModal.classList.add('hidden');
+            }
+        });
+
+
+        // --- Connection Handler ---
+        connectBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+                return;
+            }
+
+            const ip = serverIpEl.value.trim();
+            if (!ip) {
+                showToast("Please enter a server IP and port.", 'warning');
+                return;
+            }
+
+            // If the user includes a protocol (ws:// or wss://), strip it.
+            let cleanIp = ip.replace(/^(ws(s)?:\/\/)/i, '');
+
+            // Ensure the protocol is ws:// (assuming no SSL is configured here)
+            const url = `ws://${cleanIp}`;
+            logMessage(`Attempting to connect to ${url}...`);
+            updateStatus('CONNECTING...', 'text-yellow-400');
+            showToast('Connecting to server...', 'pending', 60000); 
+
+            try {
+                ws = new WebSocket(url);
+
+                ws.onopen = () => {
+                    dismissPendingToast(); 
+                    logMessage('Connection established successfully.', 'success');
+                    updateStatus('CONNECTED', 'text-green-400');
+                    showToast('Connection Successful!', 'success');
+                    setControlsEnabled(true);
+                    refreshFileList();
+                };
+
+                ws.onmessage = (event) => {
+                    handleServerMessage(event.data);
+                };
+
+                ws.onerror = (error) => {
+                    dismissPendingToast(); 
+                    logMessage('WebSocket Error. Check server console and network.', 'error');
+                    updateStatus('ERROR', 'text-red-400');
+                    showToast('Connection Error. Check IP/Port and Server.', 'error');
+                    console.error("WS Error:", error);
+                };
+
+                ws.onclose = () => {
+                    dismissPendingToast(); 
+                    logMessage('Connection closed by server or client.', 'info');
+                    updateStatus('DISCONNECTED', 'text-yellow-400');
+                    setControlsEnabled(false);
+                    fileListContainer.innerHTML = '<p class="text-gray-500 text-center p-6">Connect to the server to list files.</p>';
+                    showToast('Disconnected from server.', 'info'); 
+                };
+
+            } catch (e) {
+                dismissPendingToast(); 
+                logMessage(`Connection failed. Check IP format.`, 'error');
+                updateStatus('FAILED', 'text-red-400');
+                showToast('Failed to initialize WebSocket.', 'error');
+            }
+        });
+
+        // --- Server Message Router ---
+        function handleServerMessage(data) {
+            logMessage(`Received raw data: ${data.length > 50 ? data.substring(0, 50) + '...' : data}`, 'debug');
+            
+            try {
+                const payload = JSON.parse(data);
+
+                // 1. Download Response (Array: [filename, data_uri])
+                if (Array.isArray(payload) && payload.length === 2 && payload[1].startsWith('data:')) {
+                    const [filename, dataUri] = payload;
+                    logMessage(`Download complete for: ${filename}.`);
+                    createDownloadLink(filename, dataUri);
+                    return; 
+                }
+                
+                // 2. Download Error Response (Array: ["DOWNLOAD_ERROR", message])
+                if (Array.isArray(payload) && payload[0] === 'DOWNLOAD_ERROR') {
+                    logMessage(`DOWNLOAD ERROR: ${payload[1]}`, 'error');
+                    showToast(`Download Failed: ${payload[1]}`, 'error', 6000);
+                    return;
+                }
+                
+                // 3. Status/Error Response (Object: {status, reason, filename, action, etc.})
+                if (typeof payload === 'object' && payload !== null && payload.status) {
+                    if (payload.status === 'SUCCESS') {
+                        const action = payload.action || 'Action';
+                        const filename = payload.filename || '';
+                        logMessage(`${action} successful: ${filename}.`, 'success');
+                        showToast(`${action} successful for '${filename}'`, 'success');
+                        
+                        if (action === 'UPLOAD') {
+                             // Hide the modal after successful upload
+                            uploadModal.classList.add('hidden');
+                        }
+
+                        // Automatically refresh the file list on any successful state-changing action.
+                        if (action === 'DELETE' || action === 'UPLOAD' || action === 'REFRESH' || action === 'LISTREQ') {
+                           refreshFileList();
+                        }
+                    } else if (payload.status === 'Error') {
+                         logMessage(`SERVER ERROR: ${payload.reason}`, 'error');
+                         showToast(`Action Failed: ${payload.reason}`, 'error', 6000);
+                    }
+                    return;
+                }
+
+                // 4. File List Response (Simple array of strings, including empty list []) 
+                // This check must come after the more specific array types (downloads/errors)
+                if (Array.isArray(payload) && payload.every(item => typeof item === 'string')) {
+                    displayFileList(payload);
+                    logMessage(`File list received (${payload.length} files).`);
+                    return;
+                }
+                
+            } catch (e) {
+                logMessage(`Non-JSON Message: ${data}`, 'info');
+                showToast('Received unexpected message from server.', 'warning');
+            }
+        }
+
+        // --- File List Display ---
+        function getFileIconSvg(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const colorClass = 'text-gray-400';
+            switch (ext) {
+                case 'txt': case 'md': return `<svg class="file-icon ${colorClass}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0013.414 6L9.414 2H4zm5 2.707L12.293 8H9v-.586z" clip-rule="evenodd" /></svg>`;
+                case 'jpg': case 'png': case 'gif': case 'svg': return `<svg class="file-icon text-pink-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v2H7V5zm0 4h6v2H7V9zm0 4h6v2H7v-2z" clip-rule="evenodd" /></svg>`;
+                case 'js': case 'html': case 'css': return `<svg class="file-icon text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 4a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 000 2h6a1 1 0 100-2H7z" /></svg>`;
+                case 'zip': case 'rar': return `<svg class="file-icon text-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.5 17a2.5 2.5 0 002.5-2.5V11h-5v3.5a2.5 2.5 0 002.5 2.5zM15 11h-5v3.5a2.5 2.5 0 105 0V11zm-5-1V3.5a2.5 2.5 0 10-5 0V10h5zm5 0V3.5a2.5 2.5 0 11-5 0V10h5z" clip-rule="evenodd" /></svg>`;
+                default: return `<svg class="file-icon text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 10a1 1 0 011-1h6a1 1 0 010 2H7a1 1 0 01-1-1zm1-5a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>`;
+            }
+        }
+        
+        function displayFileList(files) {
+            fileListContainer.innerHTML = '';
+            if (files.length === 0) {
+                fileListContainer.innerHTML = '<p class="text-gray-500 text-center p-6">No files found on the server.</p>';
+                return;
+            }
+
+            files.forEach(filename => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item grid grid-cols-12 items-center p-3 transition duration-100 ease-in-out cursor-pointer';
+                fileItem.innerHTML = `
+                    <div class="col-span-6 flex items-center">
+                        ${getFileIconSvg(filename)}
+                        <span class="font-medium text-gray-300 truncate">${filename}</span>
+                    </div>
+                    <div class="col-span-6 flex justify-end space-x-2">
+                        <button class="download-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded-md shadow-sm transition duration-150" data-filename="${filename}">
+                            Download
+                        </button>
+                        <button class="delete-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded-md shadow-sm transition duration-150" data-filename="${filename}">
+                            Delete
+                        </button>
+                    </div>
+                `;
+                fileListContainer.appendChild(fileItem);
+            });
+        }
+
+        // --- Commands ---
+
+        function refreshFileList() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("LISTREQ");
+                logMessage("Requesting file list (LISTREQ)...");
+                showToast('Refreshing directory...', 'pending', 3000);
+            }
+        }
+        refreshBtn.addEventListener('click', refreshFileList);
+
+
+        // Delegation for Download/Delete buttons
+        fileListContainer.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            
+            const filename = target.dataset.filename;
+
+            if (!filename || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            if (target.classList.contains('download-btn')) {
+                const downloadPayload = JSON.stringify(["DOWNLOAD", filename]);
+                ws.send(downloadPayload);
+                logMessage(`Requesting download for: ${filename}`);
+                showToast(`Downloading '${filename}'...`, 'pending', 10000);
+            } else if (target.classList.contains('delete-btn')) {
+                showCustomConfirm(`Are you sure you want to delete ${filename}? This cannot be undone.`, () => {
+                    const deletePayload = JSON.stringify(["DELETE", filename]);
+                    ws.send(deletePayload);
+                    logMessage(`Requesting deletion for: ${filename}`);
+                    showToast(`Requesting deletion of '${filename}'...`, 'pending', 10000);
+                });
+            }
+        });
+
+        // --- Custom Confirm Modal (Replaces window.confirm) ---
+        function showCustomConfirm(message, callback) {
+            let overlay = document.getElementById('customOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'customOverlay';
+                overlay.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]';
+                document.body.appendChild(overlay);
+            }
+            overlay.innerHTML = `
+                <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-transform duration-300 scale-100 border border-red-500">
+                    <p class="text-lg font-semibold text-white mb-4">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button id="confirmCancel" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                        <button id="confirmOk" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Delete Permanently</button>
+                    </div>
+                </div>
+            `;
+            overlay.style.display = 'flex';
+
+            document.getElementById('confirmOk').onclick = () => {
+                overlay.style.display = 'none';
+                callback();
+            };
+            document.getElementById('confirmCancel').onclick = () => {
+                overlay.style.display = 'none';
+            };
+        }
+
+
+        // --- Upload Logic ---
+        uploadBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast("Please select a file to upload.", 'warning');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                const base64Data = dataUrl.split(',')[1];
+                
+                if (!base64Data) {
+                    logMessage("Failed to extract Base64 data from file.", 'error');
+                    showToast("File reading error.", 'error');
+                    return;
+                }
+
+                // Payload: [filename, base64_data_string]
+                const uploadPayload = JSON.stringify([file.name, base64Data]);
+                
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(uploadPayload);
+                    logMessage(`Uploading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)...`);
+                    showToast(`Uploading '${file.name}'...`, 'pending', 60000);
+                    fileInput.value = ''; // Clear file input
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        });
+
+        // --- Download Link Generator ---
+        function createDownloadLink(filename, dataUri) {
+            downloadLinkEl.classList.remove('hidden');
+            downloadLinkEl.innerHTML = `
+                <p class="font-semibold mb-1">Download ready (Click to save):</p>
+                <a id="actualDownloadLink" href="${dataUri}" download="${filename}" class="text-blue-400 hover:text-blue-300 underline transition duration-150">${filename}</a>
+            `;
+            // Automatically click the link to prompt download
+            document.getElementById('actualDownloadLink').click();
+            showToast(`Download of '${filename}' ready!`, 'success');
+        }
+
+    </script>
+</body>
+</html>
+
