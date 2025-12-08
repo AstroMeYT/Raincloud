@@ -95,7 +95,7 @@
                 My Files
             </button>
             <button id="navSettings" data-view="settings" class="nav-btn w-full flex items-center p-3 rounded-xl transition duration-150 hover:bg-gray-700 text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-.214-.78-.377-1.2-.477-.327-.085-.68-.112-1.012-.08C7.5 2.5 5 4.043 5 7.5c0 1.25.32 2.37.902 3.324l-.193.13C4.544 12.01 4 13.593 4 15.25c0 .324.032.645.097.962.067.33-.005.67-.189.982l-.089.155A2.25 2.25 0 005.15 19.5h9.7A2.25 2.25 0 0015.992 18l-.09-.155a1.597 1.597 0 01-.188-.982 4.47 4.47 0 01.096-.962c0-1.657-.544-3.24-1.709-4.524l-.193-.13a4.72 4.72 0 01.902-3.324c0-3.457-2.5-5-4.25-5.327z" clip-rule="evenodd" /></svg>
+                <svg xmlns="http://www.w3.2.org/2000/svg" class="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-.214-.78-.377-1.2-.477-.327-.085-.68-.112-1.012-.08C7.5 2.5 5 4.043 5 7.5c0 1.25.32 2.37.902 3.324l-.193.13C4.544 12.01 4 13.593 4 15.25c0 .324.032.645.097.962.067.33-.005.67-.189.982l-.089.155A2.25 2.25 0 005.15 19.5h9.7A2.25 2.25 0 0015.992 18l-.09-.155a1.597 1.597 0 01-.188-.982 4.47 4.47 0 01.096-.962c0-1.657-.544-3.24-1.709-4.524l-.193-.13a4.72 4.72 0 01.902-3.324c0-3.457-2.5-5-4.25-5.327z" clip-rule="evenodd" /></svg>
                 Settings
             </button>
         </nav>
@@ -155,12 +155,34 @@
             
             <div class="space-y-6">
 
-                <!-- Connection Panel (Moved Here) -->
+                <!-- Protocol Selection Panel -->
+                <div class="p-4 rounded-xl card-bg shadow-lg border border-gray-700">
+                    <h3 class="text-xl font-bold text-gray-200 mb-3">WebSocket Protocol</h3>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                        <label class="text-gray-400 font-semibold mr-4 mb-2 sm:mb-0 text-sm flex-shrink-0">Connection Type:</label>
+                        <div class="inline-flex rounded-md shadow-sm space-x-4">
+                            <!-- Insecure WS -->
+                            <div class="flex items-center">
+                                <input id="protocolWs" type="radio" name="protocol" value="ws" checked class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                <label for="protocolWs" class="ml-2 block text-sm font-medium text-gray-400">ws:// (Insecure)</label>
+                            </div>
+                            <!-- Secure WSS -->
+                            <div class="flex items-center">
+                                <input id="protocolWss" type="radio" name="protocol" value="wss" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                <label for="protocolWss" class="ml-2 block text-sm font-medium text-gray-400">wss:// (Secure)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <p id="protocolWarning" class="text-sm mt-3 text-yellow-400 hidden">
+                        Warning: If this client is hosted on HTTPS (like GitHub Pages or a secure tunnel), you MUST use wss:// or the browser will block the connection.
+                    </p>
+                </div>
+
+                <!-- Connection Panel -->
                 <div id="connectionPanel" class="p-4 rounded-xl card-bg shadow-lg border border-indigo-700">
                     <h3 class="text-xl font-bold text-gray-200 mb-3">Server Connection</h3>
                     <div class="flex flex-col md:flex-row justify-between items-center">
                         <label for="serverIp" class="text-gray-400 font-semibold mr-4 mb-2 md:mb-0 text-sm flex-shrink-0">Server Address:</label>
-                        <!-- UPDATED PLACEHOLDER FOR CLARITY -->
                         <input type="text" id="serverIp" placeholder="e.g., your-tunnel.ngrok.io or 192.168.1.5:8765"
                             class="flex-grow p-2 border border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out w-full md:w-auto mr-4 bg-gray-700 text-white">
                         <button id="connectBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out mt-2 md:mt-0 flex-shrink-0">
@@ -169,8 +191,6 @@
                     </div>
                     <p class="text-gray-400 mt-3 text-sm">
                         Current Status: <span id="currentStatusSetting">Disconnected</span>
-                        <br>
-                        <span id="protocolInfo" class="text-xs italic text-gray-500">Protocol will be determined automatically.</span>
                     </p>
                 </div>
 
@@ -236,9 +256,13 @@
         const toastContainer = document.getElementById('toastContainer');
         const indicatorEl = document.getElementById('connectionIndicator');
         const currentStatusSettingEl = document.getElementById('currentStatusSetting');
-        const protocolInfoEl = document.getElementById('protocolInfo');
         const sidebar = document.getElementById('sidebar'); 
         
+        // Protocol elements
+        const protocolWs = document.getElementById('protocolWs');
+        const protocolWss = document.getElementById('protocolWss');
+        const protocolWarning = document.getElementById('protocolWarning');
+
         // Modal elements
         const uploadModal = document.getElementById('uploadModal');
         const showUploadModalBtn = document.getElementById('showUploadModalBtn');
@@ -353,6 +377,18 @@
             }
         }
 
+        // --- Protocol Warning Display ---
+        function checkProtocolWarning() {
+            if (window.location.protocol === 'https:') {
+                protocolWarning.classList.remove('hidden');
+            } else {
+                protocolWarning.classList.add('hidden');
+            }
+        }
+        
+        // Call this on load
+        checkProtocolWarning();
+
 
         // --- Theme Management ---
         function applyTheme(theme) {
@@ -418,9 +454,6 @@
         // Initialize view
         setView('files');
         
-        // Initialize protocol info display
-        updateProtocolInfo();
-
 
         // --- Utility Functions ---
 
@@ -442,16 +475,6 @@
             currentStatusSettingEl.textContent = message;
         }
         
-        // Protocol Info Display
-        function updateProtocolInfo() {
-            const protocol = window.location.protocol === 'https:' ? 'WSS (Secure)' : 'WS (Insecure)';
-            protocolInfoEl.innerHTML = `Connecting with: <span class="font-bold text-white">${protocol}</span>`;
-            
-            if (window.location.protocol !== 'https:') {
-                 protocolInfoEl.innerHTML += `<span class="text-red-400"> (WARNING: Using WS in a public context may fail.)</span>`;
-            }
-        }
-
         /**
          * Clears the specific pending connection toast if it exists.
          */
@@ -510,6 +533,11 @@
             fileInput.disabled = !enabled;
             uploadBtn.disabled = !enabled;
             serverIpEl.disabled = enabled;
+            
+            // Disable protocol selection when connected
+            protocolWs.disabled = enabled;
+            protocolWss.disabled = enabled;
+
             connectBtn.textContent = enabled ? 'Disconnect' : 'Connect';
             connectBtn.classList.toggle('bg-red-600', enabled);
             connectBtn.classList.toggle('hover:bg-red-700', enabled);
@@ -547,22 +575,18 @@
                 return;
             }
 
-            // --- SECURE CONNECTION LOGIC ---
-            // 1. Clean the input (strip potential ws/wss protocols)
+            // --- USER-SELECTED PROTOCOL LOGIC ---
+            // 1. Get the selected protocol (ws or wss)
+            const selectedProtocol = document.querySelector('input[name="protocol"]:checked').value;
+
+            // 2. Clean the input (strip potential ws/wss protocols)
             let cleanIp = ip.replace(/^(ws(s)?:\/\/)/i, '');
             
-            // 2. Determine the protocol: use wss:// if the client itself is hosted over HTTPS, 
-            //    which covers public hosting (GitHub Pages) and secure tunnels (ngrok).
-            let protocol = 'ws://';
-            if (window.location.protocol === 'https:') {
-                protocol = 'wss://';
-            }
-
             // 3. Construct the final URL
-            const url = `${protocol}${cleanIp}`;
+            const url = `${selectedProtocol}://${cleanIp}`;
             // ------------------------------------
 
-            logMessage(`Attempting to connect to ${url}...`);
+            logMessage(`Attempting to connect to ${url}... (Protocol: ${selectedProtocol})`);
             updateStatus('CONNECTING...', 'text-yellow-400');
             showToast('Connecting to server...', 'pending', 60000); 
 
@@ -586,7 +610,7 @@
                     dismissPendingToast(); 
                     logMessage('WebSocket Error. Check server console and network. Ensure the server is running and the protocol is correct.', 'error');
                     updateStatus('ERROR', 'text-red-400');
-                    showToast('Connection Error. Check IP/Port and Server.', 'error');
+                    showToast('Connection Error. Check IP/Port and Protocol Selection.', 'error');
                     console.error("WS Error:", error);
                 };
 
