@@ -72,7 +72,6 @@
         /* File Icon Styling */
         .file-icon { width: 20px; height: 20px; fill: currentColor; margin-right: 8px; }
         
-        /* The previous swipe-area is now removed as swipe works everywhere */
     </style>
 </head>
 <body class="min-h-screen flex">
@@ -161,14 +160,18 @@
                     <h3 class="text-xl font-bold text-gray-200 mb-3">Server Connection</h3>
                     <div class="flex flex-col md:flex-row justify-between items-center">
                         <label for="serverIp" class="text-gray-400 font-semibold mr-4 mb-2 md:mb-0 text-sm flex-shrink-0">Server Address:</label>
-                        <!-- Updated Placeholder for clarity on Local vs Public connection -->
-                        <input type="text" id="serverIp" placeholder="e.g., 192.168.1.10:8765 (Local) or example.com:8765 (Public)"
+                        <!-- UPDATED PLACEHOLDER FOR CLARITY -->
+                        <input type="text" id="serverIp" placeholder="e.g., your-tunnel.ngrok.io or 192.168.1.5:8765"
                             class="flex-grow p-2 border border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out w-full md:w-auto mr-4 bg-gray-700 text-white">
                         <button id="connectBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out mt-2 md:mt-0 flex-shrink-0">
                             Connect
                         </button>
                     </div>
-                    <p class="text-gray-400 mt-3 text-sm">Current Status: <span id="currentStatusSetting">Disconnected</span></p>
+                    <p class="text-gray-400 mt-3 text-sm">
+                        Current Status: <span id="currentStatusSetting">Disconnected</span>
+                        <br>
+                        <span id="protocolInfo" class="text-xs italic text-gray-500">Protocol will be determined automatically.</span>
+                    </p>
                 </div>
 
                 <!-- Theme Settings -->
@@ -233,6 +236,7 @@
         const toastContainer = document.getElementById('toastContainer');
         const indicatorEl = document.getElementById('connectionIndicator');
         const currentStatusSettingEl = document.getElementById('currentStatusSetting');
+        const protocolInfoEl = document.getElementById('protocolInfo');
         const sidebar = document.getElementById('sidebar'); 
         
         // Modal elements
@@ -352,7 +356,7 @@
 
         // --- Theme Management ---
         function applyTheme(theme) {
-            // ... (Theme logic remains the same) ...
+            
             if (theme === 'light') {
                 document.body.classList.add('light-mode');
                 themeLightBtn.classList.add('bg-indigo-500', 'text-white', 'hover:bg-indigo-500');
@@ -413,6 +417,9 @@
 
         // Initialize view
         setView('files');
+        
+        // Initialize protocol info display
+        updateProtocolInfo();
 
 
         // --- Utility Functions ---
@@ -433,6 +440,16 @@
             indicatorEl.textContent = `Status: ${message}`;
             indicatorEl.className = `mt-3 text-xs text-center p-2 rounded-lg bg-gray-700 ${colorClass}`;
             currentStatusSettingEl.textContent = message;
+        }
+        
+        // Protocol Info Display
+        function updateProtocolInfo() {
+            const protocol = window.location.protocol === 'https:' ? 'WSS (Secure)' : 'WS (Insecure)';
+            protocolInfoEl.innerHTML = `Connecting with: <span class="font-bold text-white">${protocol}</span>`;
+            
+            if (window.location.protocol !== 'https:') {
+                 protocolInfoEl.innerHTML += `<span class="text-red-400"> (WARNING: Using WS in a public context may fail.)</span>`;
+            }
         }
 
         /**
@@ -526,15 +543,25 @@
 
             const ip = serverIpEl.value.trim();
             if (!ip) {
-                showToast("Please enter a server IP and port.", 'warning');
+                showToast("Please enter a server IP, domain, and port.", 'warning');
                 return;
             }
 
-            // If the user includes a protocol (ws:// or wss://), strip it.
+            // --- SECURE CONNECTION LOGIC ---
+            // 1. Clean the input (strip potential ws/wss protocols)
             let cleanIp = ip.replace(/^(ws(s)?:\/\/)/i, '');
+            
+            // 2. Determine the protocol: use wss:// if the client itself is hosted over HTTPS, 
+            //    which covers public hosting (GitHub Pages) and secure tunnels (ngrok).
+            let protocol = 'ws://';
+            if (window.location.protocol === 'https:') {
+                protocol = 'wss://';
+            }
 
-            // Ensure the protocol is ws:// (assuming no SSL is configured here)
-            const url = `ws://${cleanIp}`;
+            // 3. Construct the final URL
+            const url = `${protocol}${cleanIp}`;
+            // ------------------------------------
+
             logMessage(`Attempting to connect to ${url}...`);
             updateStatus('CONNECTING...', 'text-yellow-400');
             showToast('Connecting to server...', 'pending', 60000); 
@@ -557,7 +584,7 @@
 
                 ws.onerror = (error) => {
                     dismissPendingToast(); 
-                    logMessage('WebSocket Error. Check server console and network.', 'error');
+                    logMessage('WebSocket Error. Check server console and network. Ensure the server is running and the protocol is correct.', 'error');
                     updateStatus('ERROR', 'text-red-400');
                     showToast('Connection Error. Check IP/Port and Server.', 'error');
                     console.error("WS Error:", error);
@@ -796,4 +823,3 @@
     </script>
 </body>
 </html>
-
