@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material 3 File Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block" rel="stylesheet" />
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #141218; color: #E6E0E9; }
+        
+        /* Bouncy Animation Variables & Keyframes */
+        :root {
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-spring-soft: cubic-bezier(0.2, 1.2, 0.4, 1);
+        }
+
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.85) translateY(15px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .animate-bounce-in {
+            animation: bounceIn 0.5s var(--ease-spring) forwards;
+        }
+
+        /* Material 3 Dark Theme Expressive Component Styles */
+        .m3-card { background-color: #2B2930; border-radius: 28px; box-shadow: 0px 4px 8px 3px rgba(0,0,0,0.3); }
+        .m3-surface-container { background-color: #211F26; border-radius: 20px; transition: all 0.4s var(--ease-spring-soft); }
+        .m3-surface-container:hover { transform: scale(1.02) translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 10; position: relative; }
+        .m3-btn-primary { background-color: #D0BCFF; color: #381E72; border-radius: 100px; transition: all 0.4s var(--ease-spring); }
+        .m3-btn-primary:hover { background-color: #EADDFF; transform: scale(1.05) translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+        .m3-btn-primary:active { transform: scale(0.95) translateY(2px); }
+        .m3-fab { background-color: #D0BCFF; color: #381E72; border-radius: 20px; transition: all 0.5s var(--ease-spring); box-shadow: 0px 4px 8px 2px rgba(0,0,0,0.4); }
+        .m3-fab:hover { background-color: #EADDFF; box-shadow: 0px 12px 20px 4px rgba(0,0,0,0.4); transform: scale(1.1) translateY(-6px); }
+        .m3-fab:active { transform: scale(0.85) translateY(2px); }
+        .m3-input { background-color: #211F26; border-bottom: 2px solid #938F99; border-radius: 6px 6px 0 0; transition: all 0.3s var(--ease-spring-soft); color: #E6E0E9; }
+        .m3-input:focus { border-bottom-color: #D0BCFF; outline: none; background-color: #36343B; transform: scale(1.02) translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        
+        /* Shared Interactive Element Bounce */
+        .btn-bouncy { transition: all 0.4s var(--ease-spring); }
+        .btn-bouncy:hover { transform: scale(1.15) translateY(-2px); }
+        .btn-bouncy:active { transform: scale(0.85) translateY(2px); }
+
+        /* Hide default file input */
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden">
+
+    <!-- Modals Container Backdrop -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center backdrop-blur-[2px] transition-opacity duration-300">
+        
+        <!-- Alert Modal -->
+        <div id="alert-modal" class="m3-card p-6 w-11/12 max-w-sm hidden flex-col gap-4 animate-bounce-in">
+            <h3 id="alert-title" class="text-2xl font-medium text-[#E6E0E9]">Alert</h3>
+            <p id="alert-msg" class="text-[#CAC4D0]"></p>
+            <div class="flex justify-end mt-2">
+                <button onclick="closeModal()" class="text-[#D0BCFF] font-medium px-5 py-2 rounded-full hover:bg-[#4A4458]/50 transition">OK</button>
+            </div>
+        </div>
+
+        <!-- Confirm Modal -->
+        <div id="confirm-modal" class="m3-card p-6 w-11/12 max-w-sm hidden flex-col gap-4 animate-bounce-in">
+            <h3 id="confirm-title" class="text-2xl font-medium text-[#E6E0E9]">Confirm</h3>
+            <p id="confirm-msg" class="text-[#CAC4D0]"></p>
+            <div class="flex justify-end gap-2 mt-2">
+                <button onclick="closeModal()" class="text-[#D0BCFF] font-medium px-5 py-2 rounded-full hover:bg-[#4A4458]/50 transition">Cancel</button>
+                <button id="confirm-btn" class="m3-btn-primary px-6 py-2 font-medium">Confirm</button>
+            </div>
+        </div>
+
+        <!-- Prompt Modal -->
+        <div id="prompt-modal" class="m3-card p-6 w-11/12 max-w-sm hidden flex-col gap-4 animate-bounce-in">
+            <h3 id="prompt-title" class="text-2xl font-medium text-[#E6E0E9]">Prompt</h3>
+            <p id="prompt-msg" class="text-[#CAC4D0] text-sm mb-[-8px]"></p>
+            <input type="text" id="prompt-input" class="m3-input px-4 py-3 w-full text-[#E6E0E9]" />
+            <div class="flex justify-end gap-2 mt-2">
+                <button onclick="closeModal()" class="text-[#D0BCFF] font-medium px-5 py-2 rounded-full hover:bg-[#4A4458]/50 transition">Cancel</button>
+                <button id="prompt-btn" class="m3-btn-primary px-6 py-2 font-medium">Save</button>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div id="preview-modal" class="m3-card p-4 md:p-6 w-11/12 max-w-4xl max-h-[90vh] hidden flex-col gap-4 animate-bounce-in">
+            <div class="flex justify-between items-center border-b border-[#49454F] pb-3">
+                <h3 id="preview-title" class="text-xl font-medium text-[#E6E0E9] truncate pr-4">Preview</h3>
+                <button onclick="closePreview()" class="text-[#CAC4D0] hover:text-[#D0BCFF] transition shrink-0">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="preview-content" class="overflow-auto flex-grow flex items-center justify-center bg-[#141218] rounded-xl p-2 min-h-[50vh]">
+                <!-- Content injected here -->
+            </div>
+            <div class="flex justify-end mt-2">
+                <button onclick="closePreview()" class="m3-btn-primary px-6 py-2 font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 1: Login View -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="m3-card p-6 md:p-8 w-full max-w-md flex flex-col gap-6">
+            <div class="flex flex-col items-center gap-2 text-center">
+                <div class="w-20 h-20 bg-[#4A4458] text-[#D0BCFF] rounded-full flex items-center justify-center mb-2 shadow-sm">
+                    <span class="material-symbols-outlined text-4xl">folder_managed</span>
+                </div>
+                <h2 class="text-3xl font-medium text-[#E6E0E9]">Raincloud</h2>
+                <p class="text-[#CAC4D0]">Secure access to your files.</p>
+            </div>
+
+            <form onsubmit="event.preventDefault(); login();" class="flex flex-col gap-5 mt-2">
+                <div>
+                    <label class="text-sm font-medium text-[#CAC4D0] mb-1 block">Server URL</label>
+                    <input type="url" id="server-url" class="m3-input w-full px-4 py-3 text-lg" placeholder="http://0.0.0.0:7500" value="http://0.0.0.0:7500" required>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-[#CAC4D0] mb-1 block">Password</label>
+                    <input type="password" id="server-pass" class="m3-input w-full px-4 py-3 text-lg" placeholder="Enter server password" required>
+                </div>
+                <button type="submit" class="m3-btn-primary w-full py-3.5 mt-4 text-lg font-medium shadow-md">
+                    Unlock Server
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Screen 2: Main Application View -->
+    <div id="main-screen" class="hidden min-h-screen flex flex-col pb-24">
+        
+        <!-- App Header Bar -->
+        <header class="w-full px-4 md:px-6 py-3 flex justify-between items-center bg-[#2B2930] text-[#E6E0E9] sticky top-0 z-10 shadow-md border-b border-[#49454F]">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[#D0BCFF] text-2xl sm:text-3xl">cloud</span>
+                <h1 class="text-xl sm:text-2xl font-medium tracking-tight">Raincloud</h1>
+            </div>
+            <button onclick="logout()" class="px-3 py-2 sm:px-4 sm:py-2 text-[#D0BCFF] text-sm sm:text-base font-medium rounded-full hover:bg-[#4A4458] btn-bouncy flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg sm:text-xl">logout</span>
+                <span class="hidden sm:inline">Disconnect</span>
+            </button>
+        </header>
+        
+        <main class="flex-grow p-3 md:p-6 max-w-5xl w-full mx-auto">
+            <h2 class="text-xl sm:text-2xl font-medium mb-4 text-[#E6E0E9] ml-2">My Files</h2>
+            <div id="files-container" class="flex flex-col gap-2">
+                <!-- Dynamically populated files go here -->
+            </div>
+        </main>
+
+        <!-- Floating Action Button for Upload -->
+        <button onclick="triggerUpload()" class="m3-fab fixed bottom-6 right-6 md:bottom-8 md:right-8 px-5 py-4 md:px-6 md:py-4 flex items-center gap-3 z-20">
+            <span class="material-symbols-outlined text-2xl">upload_file</span>
+            <span id="fab-text" class="font-medium text-lg pr-1">Upload</span>
+        </button>
+        <input type="file" id="file-input" onchange="handleFileUpload(event)">
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentServer = '';
+        let currentPassword = '';
+        let currentPreviewUrl = null;
+
+        const PREVIEW_TYPES = {
+            image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'],
+            video: ['mp4', 'webm', 'ogg', 'mov'],
+            text: ['txt', 'md', 'csv', 'json', 'js', 'html', 'css', 'py', 'log', 'xml', 'ini', 'sh', 'bat', 'yaml', 'yml']
+        };
+
+        function getFileType(filename) {
+            const parts = filename.split('.');
+            if (parts.length < 2) return 'unknown';
+            const ext = parts.pop().toLowerCase();
+            if (PREVIEW_TYPES.image.includes(ext)) return 'image';
+            if (PREVIEW_TYPES.video.includes(ext)) return 'video';
+            if (PREVIEW_TYPES.text.includes(ext)) return 'text';
+            return 'unknown';
+        }
+
+        // --- Init ---
+        window.onload = () => {
+            const savedServer = localStorage.getItem('fs_server');
+            const savedPass = localStorage.getItem('fs_pass');
+            if (savedServer && savedPass) {
+                document.getElementById('server-url').value = savedServer;
+                document.getElementById('server-pass').value = savedPass;
+                login(savedServer, savedPass);
+            }
+        }
+
+        // --- Core Interactions ---
+        async function login(serverUrl, password) {
+            if(!serverUrl) serverUrl = document.getElementById('server-url').value;
+            if(!password) password = document.getElementById('server-pass').value;
+            
+            serverUrl = serverUrl.replace(/\/+$/, ''); // Remove trailing slashes
+            
+            try {
+                const res = await fetch(`${serverUrl}/api/auth`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${password}` }
+                });
+                
+                if (res.ok) {
+                    currentServer = serverUrl;
+                    currentPassword = password;
+                    localStorage.setItem('fs_server', serverUrl);
+                    localStorage.setItem('fs_pass', password);
+                    
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('main-screen').classList.remove('hidden');
+                    loadFiles();
+                } else {
+                    showAlert("Authentication Failed", "Incorrect password or unauthorized access.");
+                }
+            } catch (e) {
+                showAlert("Connection Error", "Could not connect. Make sure the Python server is running.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('fs_server');
+            localStorage.removeItem('fs_pass');
+            currentServer = '';
+            currentPassword = '';
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('server-pass').value = ''; // clear password input visually
+        }
+
+        // --- File Operations ---
+        async function loadFiles() {
+            try {
+                const res = await fetch(`${currentServer}/api/files`, {
+                    headers: { 'Authorization': `Bearer ${currentPassword}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderFiles(data.files);
+                } else if (res.status === 401) {
+                    logout();
+                    showAlert("Session Expired", "Please log in again.");
+                }
+            } catch (e) {
+                showAlert("Sync Error", "Could not load files from the server.");
+            }
+        }
+
+        function triggerUpload() {
+            document.getElementById('file-input').click();
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fabTextEl = document.getElementById('fab-text');
+            const originalText = fabTextEl.innerText;
+            fabTextEl.innerText = "Uploading...";
+
+            try {
+                const res = await fetch(`${currentServer}/api/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentPassword}`,
+                        'X-File-Name': encodeURIComponent(file.name)
+                    },
+                    body: file
+                });
+
+                if (res.ok) {
+                    loadFiles();
+                } else {
+                    showAlert("Upload Error", "Failed to upload file to the server.");
+                }
+            } catch (e) {
+                showAlert("Upload Error", "A network error occurred while uploading.");
+            } finally {
+                fabTextEl.innerText = originalText;
+                event.target.value = ''; // Reset input to allow re-uploading same file
+            }
+        }
+
+        async function downloadFile(filename) {
+            try {
+                const res = await fetch(`${currentServer}/api/download/${encodeURIComponent(filename)}`, {
+                    headers: { 'Authorization': `Bearer ${currentPassword}` }
+                });
+                if (!res.ok) throw new Error("Download failed");
+                
+                // Fetch blob and use Object URL to enforce download behavior with Bearer Tokens
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (e) {
+                showAlert("Download Error", "Could not fetch the file from the server.");
+            }
+        }
+
+        async function previewFile(filename) {
+            const fileType = getFileType(filename);
+            if (fileType === 'unknown') return;
+
+            // Prepare Modal
+            document.getElementById('preview-title').innerText = filename;
+            const contentDiv = document.getElementById('preview-content');
+            contentDiv.innerHTML = '<div class="text-[#D0BCFF] animate-pulse flex flex-col items-center gap-2"><span class="material-symbols-outlined text-4xl animate-spin">sync</span>Loading...</div>';
+            showModal('preview-modal');
+
+            try {
+                const res = await fetch(`${currentServer}/api/download/${encodeURIComponent(filename)}`, {
+                    headers: { 'Authorization': `Bearer ${currentPassword}` }
+                });
+                
+                if (!res.ok) throw new Error("Failed to load");
+
+                if (fileType === 'text') {
+                    const text = await res.text();
+                    contentDiv.innerHTML = `<pre class="text-[#E6E0E9] text-xs sm:text-sm w-full h-full overflow-auto p-4 whitespace-pre-wrap font-mono">${escapeHtml(text)}</pre>`;
+                } else if (fileType === 'image' || fileType === 'video') {
+                    const blob = await res.blob();
+                    currentPreviewUrl = window.URL.createObjectURL(blob);
+                    
+                    if (fileType === 'image') {
+                        contentDiv.innerHTML = `<img src="${currentPreviewUrl}" class="max-w-full max-h-full object-contain rounded" alt="${filename}">`;
+                    } else {
+                        contentDiv.innerHTML = `<video src="${currentPreviewUrl}" controls class="max-w-full max-h-[70vh] rounded"></video>`;
+                    }
+                }
+            } catch (e) {
+                contentDiv.innerHTML = `<div class="text-[#FFB4AB] flex flex-col items-center gap-2"><span class="material-symbols-outlined text-4xl">error</span>Failed to load preview.</div>`;
+            }
+        }
+
+        function closePreview() {
+            closeModal();
+            if (currentPreviewUrl) {
+                window.URL.revokeObjectURL(currentPreviewUrl);
+                currentPreviewUrl = null;
+            }
+            // Clear contents to stop video playback and release memory
+            document.getElementById('preview-content').innerHTML = ''; 
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function promptRename(filename) {
+            showPrompt("Rename File", "Enter the new name for the file:", filename, async (newName) => {
+                if (!newName || newName === filename) return;
+                try {
+                    const res = await fetch(`${currentServer}/api/files/${encodeURIComponent(filename)}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${currentPassword}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ new_name: newName })
+                    });
+                    if (res.ok) loadFiles();
+                    else showAlert("Rename Error", "Could not rename file.");
+                } catch(e) {
+                    showAlert("Network Error", "Failed to connect to the server.");
+                }
+            });
+        }
+
+        function promptDelete(filename) {
+            showConfirm("Delete File", `Are you sure you want to permanently delete '${filename}'?`, async () => {
+                try {
+                    const res = await fetch(`${currentServer}/api/files/${encodeURIComponent(filename)}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${currentPassword}` }
+                    });
+                    if (res.ok) loadFiles();
+                    else showAlert("Delete Error", "Could not delete file from server.");
+                } catch(e) {
+                    showAlert("Network Error", "Failed to connect to the server.");
+                }
+            });
+        }
+
+        // --- UI Rendering ---
+        function renderFiles(files) {
+            const visibleFiles = files.filter(f => !f.name.includes('rchide'));
+            
+            const container = document.getElementById('files-container');
+            container.innerHTML = '';
+            
+            if (visibleFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 text-center bg-[#2B2930] rounded-[24px] border-2 border-dashed border-[#49454F] animate-bounce-in">
+                        <span class="material-symbols-outlined text-5xl text-[#D0BCFF] mb-3 opacity-70">inventory_2</span>
+                        <h3 class="text-lg font-medium text-[#E6E0E9]">Directory is empty</h3>
+                        <p class="text-sm text-[#CAC4D0] mt-1">Use the upload button below to add files.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            visibleFiles.forEach((f, index) => {
+                const el = document.createElement('div');
+                const fileType = getFileType(f.name);
+                
+                // Set appropriate icon based on file type
+                let iconName = 'insert_drive_file';
+                if (fileType === 'image') iconName = 'image';
+                if (fileType === 'video') iconName = 'movie';
+                if (fileType === 'text') iconName = 'description';
+
+                // Only add preview button if supported
+                const previewBtn = fileType !== 'unknown' ? `
+                    <button onclick="previewFile('${f.name}')" class="p-1.5 sm:p-2 rounded-full hover:bg-[#4A4458] text-[#D0BCFF] btn-bouncy" title="Preview">
+                        <span class="material-symbols-outlined text-lg sm:text-xl">visibility</span>
+                    </button>
+                ` : '';
+
+                el.className = 'm3-surface-container p-2 sm:p-3 flex flex-row justify-between items-center gap-2 border border-transparent hover:border-[#938F99] animate-bounce-in';
+                el.style.animationDelay = `${index * 0.05}s`;
+                el.style.opacity = '0';
+                el.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
+                        <div class="p-2 bg-[#4A4458] rounded-full text-[#D0BCFF] flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-xl sm:text-2xl">${iconName}</span>
+                        </div>
+                        <div class="flex flex-col overflow-hidden min-w-0">
+                            <span class="font-medium text-base sm:text-lg text-[#E6E0E9] truncate block" title="${f.name}">${f.name}</span>
+                            <span class="text-xs sm:text-sm text-[#CAC4D0]">${formatBytes(f.size)}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-0.5 bg-[#2B2930] rounded-full shadow-sm px-1 py-1 shrink-0">
+                        ${previewBtn}
+                        <button onclick="downloadFile('${f.name}')" class="p-1.5 sm:p-2 rounded-full hover:bg-[#4A4458] text-[#D0BCFF] btn-bouncy" title="Download">
+                            <span class="material-symbols-outlined text-lg sm:text-xl">download</span>
+                        </button>
+                        <button onclick="promptRename('${f.name}')" class="p-1.5 sm:p-2 rounded-full hover:bg-[#4A4458] text-[#D0BCFF] btn-bouncy" title="Rename">
+                            <span class="material-symbols-outlined text-lg sm:text-xl">edit</span>
+                        </button>
+                        <button onclick="promptDelete('${f.name}')" class="p-1.5 sm:p-2 rounded-full hover:bg-[#8C1D18] text-[#FFB4AB] btn-bouncy" title="Delete">
+                            <span class="material-symbols-outlined text-lg sm:text-xl">delete</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        // --- Custom Dialogs ---
+        function showModal(id) {
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.classList.remove('hidden');
+            backdrop.classList.add('flex');
+            
+            document.querySelectorAll('#modal-backdrop > div').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('flex');
+        }
+
+        function closeModal() {
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.classList.add('hidden');
+            backdrop.classList.remove('flex');
+        }
+
+        function showAlert(title, msg) {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-msg').innerText = msg;
+            showModal('alert-modal');
+        }
+
+        function showConfirm(title, msg, onConfirm) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = msg;
+            const btn = document.getElementById('confirm-btn');
+            btn.onclick = () => {
+                closeModal();
+                onConfirm();
+            };
+            showModal('confirm-modal');
+        }
+
+        function showPrompt(title, msg, defaultValue, onSave) {
+            document.getElementById('prompt-title').innerText = title;
+            document.getElementById('prompt-msg').innerText = msg;
+            const input = document.getElementById('prompt-input');
+            input.value = defaultValue;
+            
+            const btn = document.getElementById('prompt-btn');
+            btn.onclick = () => {
+                closeModal();
+                onSave(input.value);
+            };
+            showModal('prompt-modal');
+        }
+    </script>
+</body>
+</html>
